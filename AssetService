@@ -1,0 +1,27 @@
+@RestResource(urlMapping='/lost/*')
+global class AssetService {
+    public static final String COMPREHENSIVE='Comprehensive';
+    public static final String LOSS='Loss';
+    @HttpPost
+    global static string reportLostDevice(String assetIdentifier){
+        List<Asset> assetList=[SELECT Id, status,ContactId FROM Asset WHERE Asset_Identifier__c=:assetIdentifier LIMIT 1];
+        if(assetList.size()==0){
+            return 'No device found.';
+        }
+		assetList[0].Status='Lost';
+		update assetList[0];     
+		List<Insurance__c> insuranceList=[SELECT Id FROM Insurance__c WHERE Asset__c=:assetList[0].Id AND Coverage__c=:COMPREHENSIVE LIMIT 1];        
+       
+        if(insuranceList.size()>0){
+            List<Claim__c> existingClaimList=[SELECT Id,Name FROM Claim__c WHERE Asset__c=:assetList[0].Id AND Insurance__c=:insuranceList[0].Id AND Type__c=:LOSS LIMIT 1];
+        	if(existingClaimList.size()>0){
+            	return '['+existingClaimList[0].Name+'] already filed.';
+        	}
+       	 	Claim__c newClaim=new Claim__c(Status__c='New', Type__c='Loss', Insurance__c=insuranceList[0].Id, Asset__c=assetList[0].Id, Contact__c=assetList[0].ContactId);
+        	insert newClaim;            
+            Claim__c claim=[SELECT Id,Name FROM Claim__c WHERE Id=:newClaim.Id LIMIT 1];
+			return claim.Name;            
+        }       
+        return 'No coverage. Asset status adjusted to Lost.';
+    }    
+}
