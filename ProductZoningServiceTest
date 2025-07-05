@@ -1,0 +1,60 @@
+@isTest
+private class ProductZoningServiceTest {
+    @isTest 
+    static void testPermissibleFlyZones(){
+        Product2 product=new Product2(Name='GenWatt Diesel 1000kW', ProductCode='GC1060', Family='Fixed-Wing');
+        insert product;
+        Test.startTest();
+        RestRequest req=new RestRequest();
+        req.requestURI='/services/apexrest/ProductZoning/';
+        req.params.put('ProductCode',product.ProductCode);
+        req.headers.put('CountryCode','US');
+        RestContext.request=req;
+        String result=ProductZoningService.getFlyZone();
+        Test.stopTest();
+        System.AssertEquals('[Regulated] zones only',result);
+    }
+    
+    @isTest 
+    static void testCheckWithLocalAuthorities(){
+        Product2 product=new Product2(Name='GenWatt Petrol 100000kW', ProductCode='GC1020', Family='Multi-Rotor');
+        insert product;
+        Test.startTest();
+        RestRequest req=new RestRequest();
+        req.requestURI='/services/apexrest/ProductZoning/';
+        req.params.put('ProductCode',product.ProductCode);
+        req.headers.put('CountryCode','FR');
+        RestContext.request=req;
+        String result=ProductZoningService.getFlyZone();
+        Test.stopTest();
+        System.AssertEquals('Confirm with the local authorities',result);
+    }
+
+    @isTest 
+    static void testInvalidOrMissingProductCode_Missing(){
+        Test.startTest();
+        RestRequest req=new RestRequest();
+        req.requestURI='/services/apexrest/ProductZoning/';
+        req.params.put('ProductCode','');
+        req.headers.put('CountryCode','US');
+        RestContext.request=req;
+        String result=ProductZoningService.getFlyZone();
+        Test.stopTest();
+        System.AssertEquals('ProductCode is missing or doesn\'t exist',result);
+    } 
+    
+    @isTest 
+    static void testInvalidOrMissingProductCode_Invalid(){
+        Product2 product=new Product2(Name='GenWatt Gasoline 1kW', ProductCode='GC1021', Family='Multi-Rotor');
+        insert product;
+        Test.startTest();
+        RestRequest req=new RestRequest();
+        req.requestURI='/services/apexrest/ProductZoning/';
+        req.params.put('ProductCode','GC1022');
+        req.headers.put('CountryCode','US');
+        RestContext.request=req;
+        String result=ProductZoningService.getFlyZone();
+        Test.stopTest();
+        System.AssertEquals('ProductCode is missing or doesn\'t exist',result);
+    } 
+}
