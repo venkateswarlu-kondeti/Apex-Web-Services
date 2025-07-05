@@ -1,0 +1,59 @@
+@isTest
+private class AssetServiceTest {
+    @testSetup
+    static void setupData(){
+       	Account acct=new Account(Name='Test Account');
+       	insert acct;
+       	Contact contact=new Contact(LastName='Text Contact', AccountId=acct.Id);
+       	insert contact;
+       	Asset asset=new Asset(Name='Drone Sindhoor', Status='Installed', Asset_Identifier__c='123456', AccountId=acct.Id, ContactId=contact.Id);
+       	insert asset;
+        Insurance__c insurance=new Insurance__c(Asset__c=asset.Id, Coverage__c='Comprehensive');
+        insert insurance;
+    }
+    
+    @isTest
+    static void testInvalidAssetIdentifier(){        
+        String assetIdentifier='789456';
+        Test.startTest();
+        	String result=AssetService.reportLostDevice(assetIdentifier);
+        Test.stopTest();
+        System.assertEquals('No device found.',result);
+    }
+    
+    @isTest
+    static void testClaimNumber(){        
+        String assetIdentifier='123456';
+        Test.startTest();
+        	String result=AssetService.reportLostDevice(assetIdentifier);
+        Test.stopTest();
+        Claim__c claim=[SELECT Id,Name FROM Claim__c LIMIT 1];
+        System.assertNotEquals(Null,claim.Name);
+    }
+    
+    @isTest
+    static void testClaimAlreadyFiled(){        
+        String assetIdentifier='123456';
+        Asset asset=[SELECT Id FROM Asset LIMIT 1];
+        Insurance__c insurance=[SELECT Id FROM Insurance__c LIMIT 1];        
+        Claim__c claim=new Claim__c(Asset__c=asset.Id, Insurance__c=insurance.Id, Type__c='Loss');
+        insert claim;
+        Test.startTest();
+        	String result=AssetService.reportLostDevice(assetIdentifier);
+        Test.stopTest();
+        Claim__c existingClaim=[SELECT Id,Name FROM Claim__c LIMIT 1];        
+        System.assertEquals('['+existingClaim.Name+'] already filed.',result);
+    }
+    
+    @isTest
+    static void testNoCoverage(){        
+        String assetIdentifier='123456';
+        Asset asset=[SELECT Id FROM Asset LIMIT 1];
+        Insurance__c insurance=[SELECT Id FROM Insurance__c LIMIT 1];
+		Delete insurance;        
+        Test.startTest();
+        	String result=AssetService.reportLostDevice(assetIdentifier);
+        Test.stopTest();       
+        System.assertEquals('No coverage. Asset status adjusted to Lost.',result);
+    }
+}
