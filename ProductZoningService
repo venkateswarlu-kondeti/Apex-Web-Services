@@ -1,0 +1,28 @@
+@RestResource(urlMapping='/ProductZoning/*')
+global class ProductZoningService {
+    @HttpGet
+    global static String getFlyZone(){
+        RestRequest request=RestContext.request;
+        String header=request.headers.get('CountryCode');
+        String countryCode=header!=null ? header : 'US';
+        String productCode=request.params.get('ProductCode');        
+        if(String.IsBlank(productCode)){
+            return 'ProductCode is missing or doesn\'t exist';                
+        }
+        List<Product2> productList=[SELECT Id,Family 
+                                    FROM Product2 
+                                    WHERE ProductCode =:productCode];
+                
+        List<Product_Geo_Mapping__mdt> flyZoneList;        
+        if(!productList.isEmpty()){
+            flyZoneList=[SELECT Id, Permissible_Fly_Zone__c 
+                         FROM Product_Geo_Mapping__mdt 
+                         WHERE Product_Family__c =:productList[0].Family 
+                         AND Country_Code__c =:countryCode];            
+        }else{
+            return 'ProductCode is missing or doesn\'t exist';
+        }
+        
+        return !flyZoneList.isEmpty() ? '['+flyZoneList[0].Permissible_Fly_Zone__c+'] '+'zones only' : 'Confirm with the local authorities';
+    }
+}
